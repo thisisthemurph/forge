@@ -72,7 +72,8 @@ func Run(ctx context.Context, cfg cli.Config, cwd string, getenv func(string) st
 	}
 	graph, err := scheduling.AnalyzeGraph(cfg.Feature, inputs)
 	if err != nil {
-		fmt.Fprintf(stdout, "\nScheduling graph:\n  error: %v\n", err)
+		fmt.Fprintf(stdout, "\nWarnings (Stack consistency policy on status):\n")
+		fmt.Fprintf(stdout, "  - Scheduling graph / DAG validation: %v\n", err)
 		return nil
 	}
 	order := graph.Order
