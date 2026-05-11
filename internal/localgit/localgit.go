@@ -2,6 +2,7 @@ package localgit
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"os/exec"
 	"strings"
@@ -58,4 +59,62 @@ func isWorktreeClean(repoRoot string) (bool, error) {
 		return false, err
 	}
 	return out == "", nil
+}
+
+// FeatureBaseBranchForMutation verifies **Repository hygiene** and returns the
+// short branch name checked out at invocation (**Feature base branch**).
+func FeatureBaseBranchForMutation(repoRoot string) (string, error) {
+	if err := CheckMutatingHygiene(repoRoot); err != nil {
+		return "", err
+	}
+	return currentBranchShort(repoRoot)
+}
+
+// EnsureBranchFromExisting creates branchName from the tip of fromBranch when missing,
+// then checks it out. If branchName already exists locally, it is checked out only.
+// This models cutting the **Feature branch** from the **Feature base branch**.
+func EnsureBranchFromExisting(repoRoot, branchName, fromBranch string) error {
+	exists, err := localBranchExists(repoRoot, branchName)
+	if err != nil {
+		return err
+	}
+	if exists {
+		_, err := runGit(repoRoot, "switch", branchName)
+		return err
+	}
+	if _, err := runGit(repoRoot, "branch", branchName, fromBranch); err != nil {
+		return err
+	}
+	_, err = runGit(repoRoot, "switch", branchName)
+	return err
+}
+
+// EnsureStackedFromParent creates stackedBranch from stackParentBranch when missing,
+// then checks it out. If stackedBranch already exists, it is checked out only.
+func EnsureStackedFromParent(repoRoot, stackedBranch, stackParentBranch string) error {
+	exists, err := localBranchExists(repoRoot, stackedBranch)
+	if err != nil {
+		return err
+	}
+	if exists {
+		_, err := runGit(repoRoot, "switch", stackedBranch)
+		return err
+	}
+	if _, err := runGit(repoRoot, "switch", stackParentBranch); err != nil {
+		return fmt.Errorf("checkout stack parent %q: %w", stackParentBranch, err)
+	}
+	_, err = runGit(repoRoot, "switch", "-c", stackedBranch)
+	return err
+}
+
+func localBranchExists(repoRoot, branchName string) (bool, error) {
+	err := exec.Command("git", "-C", repoRoot, "show-ref", "--verify", "--quiet", "refs/heads/"+branchName).Run()
+	if err == nil {
+		return true, nil
+	}
+	var exitErr *exec.ExitError
+	if errors.As(err, &exitErr) && exitErr.ExitCode() == 1 {
+		return false, nil
+	}
+	return false, err
 }
