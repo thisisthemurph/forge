@@ -29,19 +29,19 @@ func TestListPullRequestsByHead(t *testing.T) {
 		if r.URL.Path != "/repos/o/r/pulls" {
 			t.Fatalf("path %s", r.URL.Path)
 		}
-		if r.URL.Query().Get("head") != "o:forge/feature-1/issue-10-alpha" {
+		if r.URL.Query().Get("head") != "o:forge/feature/1/issue/10/alpha" {
 			t.Fatalf("head %q", r.URL.Query().Get("head"))
 		}
-		w.Write([]byte(`[{"number":9,"title":"[#10] x","body":"Fixes #10","state":"open","merged":false,"base":{"ref":"forge/feature-1"},"labels":[{"name":"forge"}]}]`))
+		w.Write([]byte(`[{"number":9,"title":"[#10] x","body":"Fixes #10","state":"open","merged":false,"base":{"ref":"forge/feature/1/base"},"labels":[{"name":"forge"}]}]`))
 	}))
 	t.Cleanup(srv.Close)
 
 	c := &Client{BaseURL: srv.URL, HTTP: srv.Client(), Token: "t"}
-	got, err := c.ListPullRequestsByHead(context.Background(), "o", "r", "forge/feature-1/issue-10-alpha")
+	got, err := c.ListPullRequestsByHead(context.Background(), "o", "r", "forge/feature/1/issue/10/alpha")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(got) != 1 || got[0].Number != 9 || got[0].BaseRef != "forge/feature-1" {
+	if len(got) != 1 || got[0].Number != 9 || got[0].BaseRef != "forge/feature/1/base" {
 		t.Fatalf("got %+v", got)
 	}
 }

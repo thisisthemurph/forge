@@ -11,21 +11,24 @@ const maxSlugLen = 40
 // FeatureBranch returns the deterministic **Feature branch** name for a Feature issue.
 // titleSlug must be the output of SlugFromTitle when non-empty, or "" to omit a slug suffix.
 func FeatureBranch(feature int, titleSlug string) string {
-	base := "forge/feature-" + itoa(feature)
+	base := "forge/feature/" + itoa(feature) + "/base"
 	if titleSlug == "" {
 		return base
 	}
-	return base + "-" + titleSlug
+	return base + "/" + titleSlug
 }
 
 // StackedBranch returns the deterministic **Stacked branch** name for a Sub-issue under a Feature.
 // titleSlug must be the output of SlugFromTitle when non-empty, or "" to omit a slug suffix.
+//
+// The **Feature branch** lives under forge/feature/<N>/base so git can also hold
+// forge/feature/<N>/issue/<M> without ref-name collisions (refs/heads/foo cannot coexist with refs/heads/foo/...).
 func StackedBranch(feature, subIssue int, titleSlug string) string {
-	base := "forge/feature-" + itoa(feature) + "/issue-" + itoa(subIssue)
+	base := "forge/feature/" + itoa(feature) + "/issue/" + itoa(subIssue)
 	if titleSlug == "" {
 		return base
 	}
-	return base + "-" + titleSlug
+	return base + "/" + titleSlug
 }
 
 // SlugFromTitle derives an optional stable slug from issue text for branch name suffixes.

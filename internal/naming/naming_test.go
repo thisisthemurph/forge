@@ -8,7 +8,7 @@ import (
 func TestFeatureBranch_golden(t *testing.T) {
 	t.Parallel()
 	got := FeatureBranch(11, "")
-	want := "forge/feature-11"
+	want := "forge/feature/11/base"
 	if got != want {
 		t.Fatalf("FeatureBranch(11, \"\") = %q, want %q", got, want)
 	}
@@ -17,7 +17,7 @@ func TestFeatureBranch_golden(t *testing.T) {
 func TestStackedBranch_golden(t *testing.T) {
 	t.Parallel()
 	got := StackedBranch(11, 42, "")
-	want := "forge/feature-11/issue-42"
+	want := "forge/feature/11/issue/42"
 	if got != want {
 		t.Fatalf("StackedBranch(11, 42, \"\") = %q, want %q", got, want)
 	}
@@ -47,7 +47,7 @@ func TestSlugFromTitle(t *testing.T) {
 func TestFeatureBranch_withSlug(t *testing.T) {
 	t.Parallel()
 	got := FeatureBranch(11, SlugFromTitle("Invoicing v1"))
-	want := "forge/feature-11-invoicing-v1"
+	want := "forge/feature/11/base/invoicing-v1"
 	if got != want {
 		t.Fatalf("got %q, want %q", got, want)
 	}
@@ -56,7 +56,7 @@ func TestFeatureBranch_withSlug(t *testing.T) {
 func TestStackedBranch_withSlug(t *testing.T) {
 	t.Parallel()
 	got := StackedBranch(11, 42, SlugFromTitle("Add schema"))
-	want := "forge/feature-11/issue-42-add-schema"
+	want := "forge/feature/11/issue/42/add-schema"
 	if got != want {
 		t.Fatalf("got %q, want %q", got, want)
 	}

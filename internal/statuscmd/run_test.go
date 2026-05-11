@@ -18,7 +18,7 @@ func TestRun_statusWithRepoOverride(t *testing.T) {
 		case "/repos/up/stream/issues/99/sub_issues":
 			w.Write([]byte(`[{"number":1,"title":"Child","state":"open","body":""}]`))
 		case "/repos/up/stream/pulls":
-			if r.URL.Query().Get("head") != "up:forge/feature-99/issue-1-child" {
+			if r.URL.Query().Get("head") != "up:forge/feature/99/issue/1/child" {
 				t.Fatalf("unexpected pulls head %q", r.URL.Query().Get("head"))
 			}
 			w.Write([]byte(`[]`))
@@ -48,10 +48,10 @@ func TestRun_statusWithRepoOverride(t *testing.T) {
 	if !strings.Contains(got, "Stack order") {
 		t.Fatalf("expected Stack order section:\n%s", got)
 	}
-	if !strings.Contains(got, "Feature branch:") || !strings.Contains(got, "forge/feature-99") {
+	if !strings.Contains(got, "Feature branch:") || !strings.Contains(got, "forge/feature/99/base") {
 		t.Fatalf("expected Feature branch line:\n%s", got)
 	}
-	if !strings.Contains(got, "forge/feature-99/issue-1-child") {
+	if !strings.Contains(got, "forge/feature/99/issue/1/child") {
 		t.Fatalf("expected Stacked branch for #1:\n%s", got)
 	}
 	if !strings.Contains(got, "Scheduler") || !strings.Contains(got, "Next planned work: Sub-issue #1") {
@@ -111,10 +111,10 @@ func TestRun_statusStackOrderWithBlockers(t *testing.T) {
 		t.Fatalf("expected #20 before #30 in stack section:\n%s", got)
 	}
 	branchLines := []string{
-		"forge/feature-50",
-		"forge/feature-50/issue-10-alpha",
-		"forge/feature-50/issue-20-beta",
-		"forge/feature-50/issue-30-gamma",
+		"forge/feature/50/base",
+		"forge/feature/50/issue/10/alpha",
+		"forge/feature/50/issue/20/beta",
+		"forge/feature/50/issue/30/gamma",
 	}
 	for _, line := range branchLines {
 		if !strings.Contains(got, line) {
@@ -122,9 +122,9 @@ func TestRun_statusStackOrderWithBlockers(t *testing.T) {
 		}
 	}
 	// Stacked branch lines follow stack order: alpha before beta before gamma
-	posAlpha := strings.Index(got, "issue-10-alpha")
-	posBeta := strings.Index(got, "issue-20-beta")
-	posGamma := strings.Index(got, "issue-30-gamma")
+	posAlpha := strings.Index(got, "issue/10/alpha")
+	posBeta := strings.Index(got, "issue/20/beta")
+	posGamma := strings.Index(got, "issue/30/gamma")
 	if posAlpha < 0 || posBeta < 0 || posGamma < 0 || !(posAlpha < posBeta && posBeta < posGamma) {
 		t.Fatalf("expected stacked branches in stack order:\n%s", got)
 	}
