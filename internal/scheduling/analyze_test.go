@@ -96,6 +96,21 @@ func TestAnalyze_emptySubs(t *testing.T) {
 	}
 }
 
+func TestAnalyzeGraph_returnsBlockers(t *testing.T) {
+	t.Parallel()
+	subs := []SubIssueInput{
+		{Number: 10, Body: ""},
+		{Number: 20, Body: "## Blocked by\n- #10\n"},
+	}
+	g, err := AnalyzeGraph(1, subs)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if g.Blockers[20][0] != 10 || len(g.Blockers[10]) != 0 {
+		t.Fatalf("blockers map: %#v", g.Blockers)
+	}
+}
+
 func TestAnalyze_joinsMultipleValidationErrors(t *testing.T) {
 	t.Parallel()
 	_, err := Analyze(100, []SubIssueInput{
