@@ -24,6 +24,7 @@ type SubIssue struct {
 	Number int    `json:"number"`
 	Title  string `json:"title"`
 	State  string `json:"state"`
+	Body   string `json:"body"`
 }
 
 // ListAllSubIssues returns every sub-issue for parentIssue in owner/repo (paginated).

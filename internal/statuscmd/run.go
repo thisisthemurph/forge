@@ -10,6 +10,7 @@ import (
 	"github.com/thisisthemurph/forge/internal/githubapi"
 	"github.com/thisisthemurph/forge/internal/gitremote"
 	"github.com/thisisthemurph/forge/internal/remote"
+	"github.com/thisisthemurph/forge/internal/scheduling"
 	"github.com/thisisthemurph/forge/internal/token"
 )
 
@@ -60,6 +61,20 @@ func Run(ctx context.Context, cfg cli.Config, cwd string, getenv func(string) st
 	fmt.Fprintf(stdout, "Sub-issues (%d):\n", len(subs))
 	for _, s := range subs {
 		fmt.Fprintf(stdout, "  #%d\t%s\t%s\n", s.Number, s.State, s.Title)
+	}
+
+	inputs := make([]scheduling.SubIssueInput, 0, len(subs))
+	for _, s := range subs {
+		inputs = append(inputs, scheduling.SubIssueInput{Number: s.Number, Body: s.Body})
+	}
+	order, err := scheduling.Analyze(cfg.Feature, inputs)
+	if err != nil {
+		fmt.Fprintf(stdout, "\nScheduling graph:\n  error: %v\n", err)
+		return nil
+	}
+	fmt.Fprintf(stdout, "\nStack order (Scheduling graph):\n")
+	for _, n := range order {
+		fmt.Fprintf(stdout, "  #%d\n", n)
 	}
 	return nil
 }
