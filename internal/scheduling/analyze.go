@@ -11,12 +11,18 @@ type SubIssueInput struct {
 	Body   string
 }
 
-// Analyze validates Blocker edges against the Feature and sibling Sub-issues,
-// then returns Stack order: a topological order with ascending issue-number
-// tie-break among nodes whose Blockers are already placed.
-func Analyze(feature int, subs []SubIssueInput) ([]int, error) {
+// Graph is a validated **Scheduling graph** plus **Stack order** for one Feature.
+type Graph struct {
+	// Order is **Stack order**: a topological order with ascending issue-number tie-break.
+	Order []int
+	// Blockers maps each Sub-issue number to its declared **Blocker** predecessors.
+	Blockers map[int][]int
+}
+
+// AnalyzeGraph validates Blocker edges and returns Stack order plus Blocker edges.
+func AnalyzeGraph(feature int, subs []SubIssueInput) (*Graph, error) {
 	if len(subs) == 0 {
-		return nil, nil
+		return &Graph{}, nil
 	}
 	subSet := make(map[int]struct{}, len(subs))
 	for _, s := range subs {
@@ -103,5 +109,19 @@ func Analyze(feature int, subs []SubIssueInput) ([]int, error) {
 			inDeg[w]--
 		}
 	}
-	return order, nil
+	return &Graph{Order: order, Blockers: blockersBy}, nil
+}
+
+// Analyze validates Blocker edges against the Feature and sibling Sub-issues,
+// then returns Stack order: a topological order with ascending issue-number
+// tie-break among nodes whose Blockers are already placed.
+func Analyze(feature int, subs []SubIssueInput) ([]int, error) {
+	g, err := AnalyzeGraph(feature, subs)
+	if err != nil {
+		return nil, err
+	}
+	if g == nil {
+		return nil, nil
+	}
+	return g.Order, nil
 }

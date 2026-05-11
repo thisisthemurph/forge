@@ -14,10 +14,17 @@ import (
 func TestRun_statusWithRepoOverride(t *testing.T) {
 	t.Parallel()
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/repos/up/stream/issues/99/sub_issues" {
+		switch r.URL.Path {
+		case "/repos/up/stream/issues/99/sub_issues":
+			w.Write([]byte(`[{"number":1,"title":"Child","state":"open","body":""}]`))
+		case "/repos/up/stream/pulls":
+			if r.URL.Query().Get("head") != "up:forge/feature-99/issue-1-child" {
+				t.Fatalf("unexpected pulls head %q", r.URL.Query().Get("head"))
+			}
+			w.Write([]byte(`[]`))
+		default:
 			t.Fatalf("unexpected path %s", r.URL.Path)
 		}
-		w.Write([]byte(`[{"number":1,"title":"Child","state":"open","body":""}]`))
 	}))
 	t.Cleanup(srv.Close)
 
@@ -47,20 +54,27 @@ func TestRun_statusWithRepoOverride(t *testing.T) {
 	if !strings.Contains(got, "forge/feature-99/issue-1-child") {
 		t.Fatalf("expected Stacked branch for #1:\n%s", got)
 	}
+	if !strings.Contains(got, "Scheduler") || !strings.Contains(got, "Next planned work: Sub-issue #1") {
+		t.Fatalf("expected scheduler section:\n%s", got)
+	}
 }
 
 func TestRun_statusStackOrderWithBlockers(t *testing.T) {
 	t.Parallel()
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/repos/up/stream/issues/50/sub_issues" {
-			t.Fatalf("unexpected path %s", r.URL.Path)
-		}
-		payload := `[
+		switch r.URL.Path {
+		case "/repos/up/stream/issues/50/sub_issues":
+			payload := `[
   {"number":10,"title":"Alpha","state":"open","body":""},
   {"number":20,"title":"Beta","state":"open","body":"## Blocked by\n- #10\n"},
   {"number":30,"title":"Gamma","state":"open","body":"## Blocked by\n- #10\n"}
 ]`
-		w.Write([]byte(payload))
+			w.Write([]byte(payload))
+		case "/repos/up/stream/pulls":
+			w.Write([]byte(`[]`))
+		default:
+			t.Fatalf("unexpected path %s", r.URL.Path)
+		}
 	}))
 	t.Cleanup(srv.Close)
 
@@ -113,5 +127,8 @@ func TestRun_statusStackOrderWithBlockers(t *testing.T) {
 	posGamma := strings.Index(got, "issue-30-gamma")
 	if posAlpha < 0 || posBeta < 0 || posGamma < 0 || !(posAlpha < posBeta && posBeta < posGamma) {
 		t.Fatalf("expected stacked branches in stack order:\n%s", got)
+	}
+	if !strings.Contains(got, "Next planned work: Sub-issue #10") {
+		t.Fatalf("expected next work on #10:\n%s", got)
 	}
 }
