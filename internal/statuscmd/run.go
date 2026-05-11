@@ -9,6 +9,7 @@ import (
 	"github.com/thisisthemurph/forge/internal/cli"
 	"github.com/thisisthemurph/forge/internal/githubapi"
 	"github.com/thisisthemurph/forge/internal/gitremote"
+	"github.com/thisisthemurph/forge/internal/naming"
 	"github.com/thisisthemurph/forge/internal/remote"
 	"github.com/thisisthemurph/forge/internal/scheduling"
 	"github.com/thisisthemurph/forge/internal/token"
@@ -75,6 +76,17 @@ func Run(ctx context.Context, cfg cli.Config, cwd string, getenv func(string) st
 	fmt.Fprintf(stdout, "\nStack order (Scheduling graph):\n")
 	for _, n := range order {
 		fmt.Fprintf(stdout, "  #%d\n", n)
+	}
+
+	titleByNumber := make(map[int]string, len(subs))
+	for _, s := range subs {
+		titleByNumber[s.Number] = s.Title
+	}
+	fmt.Fprintf(stdout, "\nBranch names (Deterministic branch names):\n")
+	fmt.Fprintf(stdout, "  Feature branch: %s\n", naming.FeatureBranch(cfg.Feature, ""))
+	for _, n := range order {
+		slug := naming.SlugFromTitle(titleByNumber[n])
+		fmt.Fprintf(stdout, "  #%d (stacked): %s\n", n, naming.StackedBranch(cfg.Feature, n, slug))
 	}
 	return nil
 }
