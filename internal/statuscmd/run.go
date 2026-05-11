@@ -9,8 +9,10 @@ import (
 	"github.com/thisisthemurph/forge/internal/cli"
 	"github.com/thisisthemurph/forge/internal/githubapi"
 	"github.com/thisisthemurph/forge/internal/gitremote"
+	"github.com/thisisthemurph/forge/internal/mergesnapshot"
 	"github.com/thisisthemurph/forge/internal/naming"
 	"github.com/thisisthemurph/forge/internal/remote"
+	"github.com/thisisthemurph/forge/internal/scheduler"
 	"github.com/thisisthemurph/forge/internal/scheduling"
 	"github.com/thisisthemurph/forge/internal/token"
 )
@@ -68,11 +70,12 @@ func Run(ctx context.Context, cfg cli.Config, cwd string, getenv func(string) st
 	for _, s := range subs {
 		inputs = append(inputs, scheduling.SubIssueInput{Number: s.Number, Body: s.Body})
 	}
-	order, err := scheduling.Analyze(cfg.Feature, inputs)
+	graph, err := scheduling.AnalyzeGraph(cfg.Feature, inputs)
 	if err != nil {
 		fmt.Fprintf(stdout, "\nScheduling graph:\n  error: %v\n", err)
 		return nil
 	}
+	order := graph.Order
 	fmt.Fprintf(stdout, "\nStack order (Scheduling graph):\n")
 	for _, n := range order {
 		fmt.Fprintf(stdout, "  #%d\n", n)
@@ -87,6 +90,26 @@ func Run(ctx context.Context, cfg cli.Config, cwd string, getenv func(string) st
 	for _, n := range order {
 		slug := naming.SlugFromTitle(titleByNumber[n])
 		fmt.Fprintf(stdout, "  #%d (stacked): %s\n", n, naming.StackedBranch(cfg.Feature, n, slug))
+	}
+
+	snap, err := mergesnapshot.LoadFromGitHub(ctx, client, owner, repo, cfg.Feature, order, titleByNumber)
+	if err != nil {
+		return err
+	}
+	plan := scheduler.BuildPlan(cfg.Feature, order, graph.Blockers, titleByNumber, snap)
+
+	if len(plan.Warnings) > 0 {
+		fmt.Fprintf(stdout, "\nWarnings (Stack consistency policy on status):\n")
+		for _, w := range plan.Warnings {
+			fmt.Fprintf(stdout, "  - %s\n", w)
+		}
+	}
+
+	fmt.Fprintf(stdout, "\nScheduler (merge snapshot + Stack order):\n")
+	if plan.NextExecutable != nil {
+		fmt.Fprintf(stdout, "  Next planned work: Sub-issue #%d\n", *plan.NextExecutable)
+	} else {
+		fmt.Fprintf(stdout, "  Next planned work: none (no open Stack position matched **Executable** rules)\n")
 	}
 	return nil
 }
