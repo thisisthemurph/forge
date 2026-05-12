@@ -17,8 +17,8 @@ func TestLoadFromGitHub_findsForgeLinkedPR(t *testing.T) {
 		}
 		head := r.URL.Query().Get("head")
 		switch head {
-		case "o:forge/feature-50/issue-10-alpha":
-			w.Write([]byte(`[{"number":9,"title":"[#10] Alpha","body":"Fixes #10","state":"open","merged":false,"base":{"ref":"forge/feature-50"},"labels":[{"name":"forge"}]}]`))
+		case "o:forge/feature/50/issue/10/alpha":
+			w.Write([]byte(`[{"number":9,"title":"[#10] Alpha","body":"Fixes #10","state":"open","merged":false,"base":{"ref":"forge/feature/50/base"},"labels":[{"name":"forge"}]}]`))
 		default:
 			w.Write([]byte(`[]`))
 		}
