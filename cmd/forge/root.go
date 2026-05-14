@@ -1,4 +1,4 @@
-package cli
+package main
 
 import (
 	"context"
@@ -10,22 +10,23 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+	"github.com/thisisthemurph/forge/internal/cli"
 	"github.com/thisisthemurph/forge/internal/githubapi"
+	"github.com/thisisthemurph/forge/internal/runcmd"
+	"github.com/thisisthemurph/forge/internal/statuscmd"
 )
 
 const repoFlagName = "repo"
 
-// Deps are runtime dependencies for the forge CLI (wired from cmd/forge).
-type Deps struct {
-	Getenv     func(string) string
-	GhAuth     func() (string, error)
-	Client     *githubapi.Client
-	Stdin      io.Reader
-	Stdout     io.Writer
-	Stderr     io.Writer
-	Getwd      func() (string, error)
-	ExecStatus func(ctx context.Context, cfg Config, cwd string) error
-	ExecRun    func(ctx context.Context, cfg Config, cwd string) error
+// forgeDeps holds runtime wiring for the CLI (I/O, GitHub client, env).
+type forgeDeps struct {
+	Getenv func(string) string
+	GhAuth func() (string, error)
+	Client *githubapi.Client
+	Stdin  io.Reader
+	Stdout io.Writer
+	Stderr io.Writer
+	Getwd  func() (string, error)
 }
 
 func repoOverrideFromCmd(cmd *cobra.Command) (string, error) {
@@ -41,8 +42,7 @@ func repoOverrideFromCmd(cmd *cobra.Command) (string, error) {
 	return repo, nil
 }
 
-// NewRootCmd builds the Cobra command tree for forge.
-func NewRootCmd(deps Deps) *cobra.Command {
+func newRootCmd(deps *forgeDeps) *cobra.Command {
 	if deps.Getwd == nil {
 		deps.Getwd = os.Getwd
 	}
@@ -76,10 +76,9 @@ func NewRootCmd(deps Deps) *cobra.Command {
 	root.PersistentFlags().String(
 		repoFlagName,
 		"",
-		`GitHub "owner/repo" for API calls (overrides origin).`,
+		`GitHub "owner/repo" for API calls (overrides origin). May appear before or after the subcommand.`,
 	)
 
-	// Avoid registering a subcommand named "help" so `forge help` matches legacy "unknown command".
 	root.SetHelpCommand(&cobra.Command{
 		Use:    "__forge_internal_help_placeholder",
 		Hidden: true,
@@ -119,8 +118,8 @@ func NewRootCmd(deps Deps) *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("get working directory: %w", err)
 			}
-			cfg := Config{RepoOverride: repoOverride, Feature: n}
-			return deps.ExecStatus(ctx, cfg, cwd)
+			cfg := cli.Config{RepoOverride: repoOverride, Feature: n}
+			return statuscmd.Run(ctx, cfg, cwd, deps.Getenv, deps.GhAuth, deps.Client, deps.Stdout)
 		},
 	}
 
@@ -144,8 +143,8 @@ func NewRootCmd(deps Deps) *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("get working directory: %w", err)
 			}
-			cfg := Config{RepoOverride: repoOverride, Feature: n}
-			return deps.ExecRun(ctx, cfg, cwd)
+			cfg := cli.Config{RepoOverride: repoOverride, Feature: n}
+			return runcmd.Run(ctx, cfg, cwd, deps.Getenv, deps.GhAuth, deps.Client, deps.Stdin, deps.Stdout, deps.Stderr)
 		},
 	}
 

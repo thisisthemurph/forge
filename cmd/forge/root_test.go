@@ -1,9 +1,10 @@
-package cli
+package main
 
 import (
 	"bytes"
 	"context"
-	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 
@@ -12,19 +13,13 @@ import (
 
 func TestExecute_argvErrors(t *testing.T) {
 	t.Parallel()
-	deps := Deps{
+	deps := &forgeDeps{
 		Getenv: func(string) string { return "" },
 		GhAuth: func() (string, error) { return "", nil },
 		Client: &githubapi.Client{},
 		Stdout: &bytes.Buffer{},
 		Stderr: &bytes.Buffer{},
 		Getwd:  func() (string, error) { return t.TempDir(), nil },
-		ExecStatus: func(context.Context, Config, string) error {
-			panic("ExecStatus must not be called in this test")
-		},
-		ExecRun: func(context.Context, Config, string) error {
-			panic("ExecRun must not be called in this test")
-		},
 	}
 
 	tests := []struct {
@@ -84,7 +79,7 @@ func TestExecute_argvErrors(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			root := NewRootCmd(deps)
+			root := newRootCmd(deps)
 			root.SetArgs(tt.argv)
 			err := root.ExecuteContext(context.Background())
 			if err == nil {
@@ -103,35 +98,40 @@ func TestExecute_argvErrors(t *testing.T) {
 	}
 }
 
-func TestExecute_statusInvokesExecStatus(t *testing.T) {
+func TestExecute_statusWithHTTPServer(t *testing.T) {
 	t.Parallel()
-	var saw bool
-	deps := Deps{
-		Getenv: func(string) string { return "" },
-		GhAuth: func() (string, error) { return "", nil },
-		Client: &githubapi.Client{},
-		Stdout: &bytes.Buffer{},
-		Stderr: &bytes.Buffer{},
-		Getwd:  func() (string, error) { return t.TempDir(), nil },
-		ExecStatus: func(_ context.Context, cfg Config, _ string) error {
-			saw = true
-			if cfg.RepoOverride != "o/r" || cfg.Feature != 3 {
-				t.Fatalf("cfg = %+v", cfg)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/repos/o/r/issues/3/sub_issues" {
+			t.Fatalf("unexpected path %s", r.URL.Path)
+		}
+		w.Write([]byte(`[]`))
+	}))
+	t.Cleanup(srv.Close)
+
+	var out strings.Builder
+	deps := &forgeDeps{
+		Getenv: func(k string) string {
+			if k == "GITHUB_TOKEN" {
+				return "test-token"
 			}
-			return fmt.Errorf("stub-status")
+			return ""
 		},
-		ExecRun: func(context.Context, Config, string) error {
-			panic("ExecRun must not be called")
-		},
+		GhAuth: nil,
+		Client: &githubapi.Client{BaseURL: srv.URL, HTTP: srv.Client()},
+		Stdout: &out,
+		Stderr: &out,
+		Getwd:  func() (string, error) { return t.TempDir(), nil },
 	}
-	root := NewRootCmd(deps)
+
+	root := newRootCmd(deps)
 	root.SetArgs([]string{"--repo=o/r", "status", "3"})
 	err := root.ExecuteContext(context.Background())
-	if !saw {
-		t.Fatal("expected ExecStatus to run")
+	if err != nil {
+		t.Fatal(err)
 	}
-	if err == nil || err.Error() != "stub-status" {
-		t.Fatalf("err = %v", err)
+	got := out.String()
+	if !strings.Contains(got, "Feature #3") || !strings.Contains(got, "No sub-issues attached") {
+		t.Fatalf("output:\n%s", got)
 	}
 }
 
@@ -143,53 +143,77 @@ func TestExecute_repoFlagFlexiblePlacement(t *testing.T) {
 		{"status", "--repo", "o/r", "3"},
 	}
 	for _, argv := range cases {
-		var got string
-		deps := Deps{
-			Getenv: func(string) string { return "" },
-			GhAuth: func() (string, error) { return "", nil },
-			Client: &githubapi.Client{},
-			Stdout: &bytes.Buffer{},
-			Stderr: &bytes.Buffer{},
-			Getwd:  func() (string, error) { return t.TempDir(), nil },
-			ExecStatus: func(_ context.Context, cfg Config, _ string) error {
-				got = cfg.RepoOverride
-				return fmt.Errorf("stop")
-			},
-			ExecRun: func(context.Context, Config, string) error {
-				panic("ExecRun must not be called")
-			},
-		}
-		root := NewRootCmd(deps)
-		root.SetArgs(argv)
-		_ = root.ExecuteContext(context.Background())
-		if got != "o/r" {
-			t.Fatalf("argv=%v repo=%q", argv, got)
-		}
+		argv := argv
+		t.Run(strings.Join(argv, " "), func(t *testing.T) {
+			t.Parallel()
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path != "/repos/o/r/issues/3/sub_issues" {
+					t.Errorf("unexpected path %s", r.URL.Path)
+					return
+				}
+				w.Write([]byte(`[]`))
+			}))
+			t.Cleanup(srv.Close)
+
+			var out strings.Builder
+			deps := &forgeDeps{
+				Getenv: func(k string) string {
+					if k == "GITHUB_TOKEN" {
+						return "test-token"
+					}
+					return ""
+				},
+				GhAuth: nil,
+				Client: &githubapi.Client{BaseURL: srv.URL, HTTP: srv.Client()},
+				Stdout: &out,
+				Stderr: &out,
+				Getwd:  func() (string, error) { return t.TempDir(), nil },
+			}
+			root := newRootCmd(deps)
+			root.SetArgs(argv)
+			err := root.ExecuteContext(context.Background())
+			if err != nil {
+				t.Fatalf("err=%v", err)
+			}
+			if !strings.Contains(out.String(), "Feature #3") {
+				t.Fatalf("output:\n%s", out.String())
+			}
+		})
 	}
 }
 
 func TestExecute_repoFlagLastWins(t *testing.T) {
 	t.Parallel()
-	var got string
-	deps := Deps{
-		Getenv: func(string) string { return "" },
-		GhAuth: func() (string, error) { return "", nil },
-		Client: &githubapi.Client{},
-		Stdout: &bytes.Buffer{},
-		Stderr: &bytes.Buffer{},
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/repos/c/d/issues/1/sub_issues" {
+			t.Fatalf("unexpected path %s", r.URL.Path)
+		}
+		w.Write([]byte(`[]`))
+	}))
+	t.Cleanup(srv.Close)
+
+	var out strings.Builder
+	deps := &forgeDeps{
+		Getenv: func(k string) string {
+			if k == "GITHUB_TOKEN" {
+				return "test-token"
+			}
+			return ""
+		},
+		GhAuth: nil,
+		Client: &githubapi.Client{BaseURL: srv.URL, HTTP: srv.Client()},
+		Stdout: &out,
+		Stderr: &out,
 		Getwd:  func() (string, error) { return t.TempDir(), nil },
-		ExecStatus: func(_ context.Context, cfg Config, _ string) error {
-			got = cfg.RepoOverride
-			return fmt.Errorf("stop")
-		},
-		ExecRun: func(context.Context, Config, string) error {
-			panic("ExecRun must not be called")
-		},
 	}
-	root := NewRootCmd(deps)
+
+	root := newRootCmd(deps)
 	root.SetArgs([]string{"--repo", "a/b", "--repo=c/d", "status", "1"})
-	_ = root.ExecuteContext(context.Background())
-	if got != "c/d" {
-		t.Fatalf("repo=%q want c/d", got)
+	err := root.ExecuteContext(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out.String(), "Feature #1") {
+		t.Fatalf("output:\n%s", out.String())
 	}
 }

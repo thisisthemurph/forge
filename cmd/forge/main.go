@@ -7,15 +7,12 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/thisisthemurph/forge/internal/cli"
 	"github.com/thisisthemurph/forge/internal/githubapi"
-	"github.com/thisisthemurph/forge/internal/runcmd"
-	"github.com/thisisthemurph/forge/internal/statuscmd"
 )
 
 func main() {
 	client := &githubapi.Client{}
-	deps := cli.Deps{
+	deps := &forgeDeps{
 		Getenv: os.Getenv,
 		GhAuth: ghAuthToken,
 		Client: client,
@@ -23,15 +20,9 @@ func main() {
 		Stdout: os.Stdout,
 		Stderr: os.Stderr,
 		Getwd:  os.Getwd,
-		ExecStatus: func(ctx context.Context, cfg cli.Config, dir string) error {
-			return statuscmd.Run(ctx, cfg, dir, os.Getenv, ghAuthToken, client, os.Stdout)
-		},
-		ExecRun: func(ctx context.Context, cfg cli.Config, dir string) error {
-			return runcmd.Run(ctx, cfg, dir, os.Getenv, ghAuthToken, client, os.Stdin, os.Stdout, os.Stderr)
-		},
 	}
 
-	root := cli.NewRootCmd(deps)
+	root := newRootCmd(deps)
 	root.SetArgs(os.Args[1:])
 	if err := root.ExecuteContext(context.Background()); err != nil {
 		fmt.Fprintf(os.Stderr, "forge: %v\n", err)
