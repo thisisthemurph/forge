@@ -2,7 +2,7 @@
 
 Forge is a small Go CLI for GitHub-backed feature work. You attach sub-issues to a parent feature issue, declare dependencies in each sub-issue’s `## Blocked by` section, and Forge figures out stack order, branch names, and what to do next. It can inspect that plan (`status`) or drive the next step (`run`): set up stacked git branches, invoke the Cursor CLI as the agent runner, then push and open or update Forge-managed pull requests. Humans still review and merge PRs.
 
-Domain vocabulary and v1 behavior details live in [`CONTEXT.md`](CONTEXT.md).
+Domain vocabulary and v1 behavior details live in `[CONTEXT.md](CONTEXT.md)`.
 
 ## Requirements
 
@@ -16,7 +16,7 @@ Domain vocabulary and v1 behavior details live in [`CONTEXT.md`](CONTEXT.md).
 From a clone of this repo (Go 1.23+):
 
 ```bash
-go build -o forge ./cmd/forge
+go build -o ./.bin/forge ./cmd/forge
 ```
 
 Optionally install onto your `PATH`:
