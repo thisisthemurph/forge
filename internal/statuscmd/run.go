@@ -13,10 +13,6 @@ import (
 
 // Run executes the read-only status flow for a Feature issue.
 func Run(ctx context.Context, cfg cli.Config, cwd string, getenv func(string) string, ghAuth func() (string, error), client *githubapi.Client, stdout io.Writer) error {
-	if cfg.Subcommand != "status" {
-		return fmt.Errorf("internal error: unsupported command %q", cfg.Subcommand)
-	}
-
 	st, err := featureplan.Load(ctx, cfg, cwd, getenv, ghAuth, client)
 	if err != nil {
 		return err
