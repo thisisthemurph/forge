@@ -10,6 +10,7 @@ import (
 
 	"github.com/thisisthemurph/forge/internal/cli"
 	"github.com/thisisthemurph/forge/internal/githubapi"
+	"github.com/thisisthemurph/forge/internal/runcmd"
 	"github.com/thisisthemurph/forge/internal/statuscmd"
 )
 
@@ -31,11 +32,23 @@ func run(ctx context.Context, argv []string, getenv func(string) string, stdout 
 		return fmt.Errorf("get working directory: %w", err)
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, 60*time.Second)
+	timeout := 60 * time.Second
+	if cfg.Subcommand == "run" {
+		// Agent runs can exceed GitHub API-only flows; keep status bounded.
+		timeout = 2 * time.Hour
+	}
+	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
 	client := &githubapi.Client{}
-	return statuscmd.Run(ctx, cfg, cwd, getenv, ghAuthToken, client, stdout)
+	switch cfg.Subcommand {
+	case "status":
+		return statuscmd.Run(ctx, cfg, cwd, getenv, ghAuthToken, client, stdout)
+	case "run":
+		return runcmd.Run(ctx, cfg, cwd, getenv, ghAuthToken, client, os.Stdin, stdout, os.Stderr)
+	default:
+		return fmt.Errorf("internal error: unknown subcommand %q", cfg.Subcommand)
+	}
 }
 
 func ghAuthToken() (string, error) {

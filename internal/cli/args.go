@@ -13,7 +13,7 @@ type Config struct {
 }
 
 // ParseArgs parses argv without the program name (os.Args[1:]).
-// Supported form: forge [--repo owner/name] status <feature-issue-number>
+// Supported form: forge [--repo owner/name] (status|run) <feature-issue-number>
 func ParseArgs(argv []string) (Config, error) {
 	var cfg Config
 	i := 0
@@ -28,17 +28,19 @@ func ParseArgs(argv []string) (Config, error) {
 		i += 2
 	}
 	if i >= len(argv) {
-		return cfg, fmt.Errorf("usage: forge [--repo owner/name] status <feature-issue-number>")
+		return cfg, fmt.Errorf("usage: forge [--repo owner/name] (status|run) <feature-issue-number>")
 	}
 	switch argv[i] {
 	case "status":
 		cfg.Subcommand = "status"
+	case "run":
+		cfg.Subcommand = "run"
 	default:
-		return cfg, fmt.Errorf("unknown command %q (expected status)", argv[i])
+		return cfg, fmt.Errorf("unknown command %q (expected status or run)", argv[i])
 	}
 	i++
 	if i >= len(argv) {
-		return cfg, fmt.Errorf("status requires feature issue number")
+		return cfg, fmt.Errorf("%s requires feature issue number", cfg.Subcommand)
 	}
 	n, err := strconv.Atoi(argv[i])
 	if err != nil || n < 1 {
