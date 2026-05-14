@@ -22,7 +22,7 @@ func TestRun_noPendingWork_emptySubIssues(t *testing.T) {
 	}))
 	t.Cleanup(srv.Close)
 
-	cfg := cli.Config{RepoOverride: "up/stream", Subcommand: "run", Feature: 77}
+	cfg := cli.Config{RepoOverride: "up/stream", Feature: 77}
 	getenv := func(k string) string {
 		if k == "GITHUB_TOKEN" {
 			return "test-token"
@@ -51,7 +51,7 @@ func TestRun_graphErrorIsFatal(t *testing.T) {
 	}))
 	t.Cleanup(srv.Close)
 
-	cfg := cli.Config{RepoOverride: "up/stream", Subcommand: "run", Feature: 42}
+	cfg := cli.Config{RepoOverride: "up/stream", Feature: 42}
 	getenv := func(k string) string {
 		if k == "GITHUB_TOKEN" {
 			return "test-token"
@@ -90,7 +90,7 @@ func TestRun_stackWarningsAreFatal(t *testing.T) {
 	}))
 	t.Cleanup(srv.Close)
 
-	cfg := cli.Config{RepoOverride: "up/stream", Subcommand: "run", Feature: 1}
+	cfg := cli.Config{RepoOverride: "up/stream", Feature: 1}
 	getenv := func(k string) string {
 		if k == "GITHUB_TOKEN" {
 			return "test-token"

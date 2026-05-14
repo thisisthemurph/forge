@@ -23,9 +23,6 @@ import (
 // has nothing executable, otherwise prepares branches, runs the **Cursor CLI**, pushes,
 // and ensures a **Forge-managed PR**.
 func Run(ctx context.Context, cfg cli.Config, cwd string, getenv func(string) string, ghAuth func() (string, error), client *githubapi.Client, stdin io.Reader, stdout, stderr io.Writer) error {
-	if cfg.Subcommand != "run" {
-		return fmt.Errorf("internal error: unsupported command %q", cfg.Subcommand)
-	}
 	if stdin == nil {
 		stdin = os.Stdin
 	}

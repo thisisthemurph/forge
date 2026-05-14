@@ -28,7 +28,7 @@ func TestRun_statusWithRepoOverride(t *testing.T) {
 	}))
 	t.Cleanup(srv.Close)
 
-	cfg := cli.Config{RepoOverride: "up/stream", Subcommand: "status", Feature: 99}
+	cfg := cli.Config{RepoOverride: "up/stream", Feature: 99}
 	getenv := func(k string) string {
 		if k == "GITHUB_TOKEN" {
 			return "test-token"
@@ -78,7 +78,7 @@ func TestRun_statusStackOrderWithBlockers(t *testing.T) {
 	}))
 	t.Cleanup(srv.Close)
 
-	cfg := cli.Config{RepoOverride: "up/stream", Subcommand: "status", Feature: 50}
+	cfg := cli.Config{RepoOverride: "up/stream", Feature: 50}
 	getenv := func(k string) string {
 		if k == "GITHUB_TOKEN" {
 			return "test-token"

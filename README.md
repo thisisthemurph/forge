@@ -1,6 +1,6 @@
 # Forge
 
-Forge is a small Go CLI for GitHub-backed feature work. You attach sub-issues to a parent feature issue, declare dependencies in each sub-issue’s `## Blocked by` section, and Forge figures out stack order, branch names, and what to do next. It can inspect that plan (`status`) or drive the next step (`run`): set up stacked git branches, invoke the Cursor CLI as the agent runner, then push and open or update Forge-managed pull requests. Humans still review and merge PRs.
+Forge is a small Go CLI for GitHub-backed feature work. You attach sub-issues to a parent feature issue, declare dependencies in each sub-issue's `## Blocked by` section, and Forge figures out stack order, branch names, and what to do next. It can inspect that plan (`status`) or drive the next step (`run`): set up stacked git branches, invoke the Cursor CLI as the agent runner, then push and open or update Forge-managed pull requests. Humans still review and merge PRs.
 
 Domain vocabulary and v1 behavior details live in `[CONTEXT.md](CONTEXT.md)`.
 
@@ -28,14 +28,16 @@ go install ./cmd/forge
 ## Usage
 
 ```text
-forge [--repo owner/name] <command> <feature-issue-number>
+forge [flags] <command> <feature-issue-number>
 ```
+
+Use the global flag `--repo owner/name` (or `--repo=owner/name`) when `origin` does not identify the GitHub repo where the feature issue lives.
 
 - `<feature-issue-number>` is the GitHub issue number of the parent feature only. You do not pass individual sub-issue numbers; Forge loads every issue attached to that feature and schedules from the graph.
 
 ### `forge status <n>`
 
-Read-only summary: repo, attached sub-issues, stack order, deterministic branch names, scheduler’s “next work” if any. Scheduling or stack warnings are printed instead of failing the command.
+Read-only summary: repo, attached sub-issues, stack order, deterministic branch names, scheduler's “next work” if any. Scheduling or stack warnings are printed instead of failing the command.
 
 ### `forge run <n>`
 
@@ -43,7 +45,7 @@ Mutating loop for feature `#n`: validates the scheduling graph and stack consist
 
 ### Global flag: `--repo`
 
-Place `--repo owner/repo` immediately after `forge` and before the subcommand when `origin` does not identify the GitHub repo where the feature issue lives.
+Pass `--repo owner/repo` (or `--repo=owner/repo`) when `origin` does not identify the GitHub repo where the feature issue lives. It is a persistent flag and may appear before or after the subcommand.
 
 Examples:
 
@@ -51,6 +53,7 @@ Examples:
 forge status 42
 forge run 42
 forge --repo upstream/org status 42
+forge status 42 --repo upstream/org
 ```
 
 Avoid overlapping `forge run` invocations for the same feature or checkout; Forge does not coordinate concurrent runs.
