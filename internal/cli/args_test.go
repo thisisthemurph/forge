@@ -28,13 +28,28 @@ func TestParseArgs(t *testing.T) {
 			wantErr: true,
 		},
 		{
+			name:    "run missing number",
+			argv:    []string{"run"},
+			wantErr: true,
+		},
+		{
 			name:    "bad number",
 			argv:    []string{"status", "x"},
 			wantErr: true,
 		},
 		{
+			name: "run with number",
+			argv: []string{"run", "1"},
+			want: Config{Subcommand: "run", Feature: 1},
+		},
+		{
+			name: "repo override with run",
+			argv: []string{"--repo", "o/r", "run", "9"},
+			want: Config{RepoOverride: "o/r", Subcommand: "run", Feature: 9},
+		},
+		{
 			name:    "unknown command",
-			argv:    []string{"run", "1"},
+			argv:    []string{"deploy", "1"},
 			wantErr: true,
 		},
 		{
