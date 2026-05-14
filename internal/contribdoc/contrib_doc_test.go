@@ -53,3 +53,28 @@ func TestContributorForgeCLIDoc_AgentRunnerScope(t *testing.T) {
 		}
 	}
 }
+
+// Issue #9 acceptance: token discovery order and --repo fork/upstream split.
+func TestContributorForgeCLIDoc_AuthAndRepo(t *testing.T) {
+	doc := contributorForgeCLIDoc(t)
+	for _, needle := range []string{
+		"GH_TOKEN",
+		"GITHUB_TOKEN",
+		"gh auth",
+		"`--repo`",
+		"fork",
+		"upstream",
+	} {
+		if !strings.Contains(doc, needle) {
+			t.Errorf("docs/contributors/forge-cli.md should mention %q (auth / repository targeting)", needle)
+		}
+	}
+}
+
+// Issue #9 acceptance: cross-link CONTEXT.md for authoritative terminology.
+func TestContributorForgeCLIDoc_ContextGlossaryLink(t *testing.T) {
+	doc := contributorForgeCLIDoc(t)
+	if !strings.Contains(doc, "../../CONTEXT.md") {
+		t.Error("docs/contributors/forge-cli.md should link to ../../CONTEXT.md for the glossary")
+	}
+}

@@ -19,3 +19,19 @@ Forge does not take locks across terminals or machines. Avoid overlapping `forge
 ## Security: tokens
 
 Forge resolves a **GitHub token** for API calls and **must not** print token values in logs or normal CLI output. Treat CI secrets like any other credential.
+
+## GitHub token (v1)
+
+Resolution order matches **CONTEXT.md**: **`GH_TOKEN`**, then **`GITHUB_TOKEN`**. If both are unset or blank, Forge may invoke the GitHub CLI’s token helper when **`gh auth`** is configured (`gh auth login`); otherwise authentication fails with a clear message.
+
+## Repository targeting and `--repo`
+
+Forge derives **`owner/repo`** from **`origin`** when that remote uses **github.com**. Pass **`--repo owner/name`** when tracking issues on **upstream** while **`origin`** points at your **fork**, so the GitHub API targets the repository where the **Feature** issue lives.
+
+## CLI output (v1)
+
+Output is plain text for humans; there is no **`--json`** mode in v1.
+
+## Glossary
+
+**Forge PR identification**, **Stack consistency policy**, **Executable**, and the rest of the scheduling vocabulary are defined in [CONTEXT.md](../../CONTEXT.md). Prefer that file’s terms in issues and code so user-facing errors stay aligned with the product language.
