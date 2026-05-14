@@ -148,3 +148,26 @@ func TestEnsureStackedFromParent_branchesFromStackParent(t *testing.T) {
 		t.Fatalf("stacked branch should start at feature tip %s, got %s", featureTip, got)
 	}
 }
+
+func TestPushOriginBranch_pushesToBareRemote(t *testing.T) {
+	repo := initRepoWithMain(t)
+	parent := t.TempDir()
+	bare := filepath.Join(parent, "origin.git")
+	gitCmd(t, parent, "init", "--bare", "origin.git")
+
+	gitCmd(t, repo, "remote", "add", "origin", bare)
+	gitCmd(t, repo, "push", "-u", "origin", "main")
+
+	readme := filepath.Join(repo, "README.md")
+	if err := os.WriteFile(readme, []byte("topic work\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	gitCmd(t, repo, "checkout", "-b", "topic")
+	gitCmd(t, repo, "add", "README.md")
+	gitCmd(t, repo, "commit", "-m", "topic")
+
+	if err := PushOriginBranch(repo, "topic"); err != nil {
+		t.Fatal(err)
+	}
+	gitCmd(t, bare, "show-ref", "--verify", "refs/heads/topic")
+}

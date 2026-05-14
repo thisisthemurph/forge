@@ -118,3 +118,13 @@ func localBranchExists(repoRoot, branchName string) (bool, error) {
 	}
 	return false, err
 }
+
+// PushOriginBranch pushes a local branch to **origin** using `git push -u`
+// (**Push remote (v1)**).
+func PushOriginBranch(repoRoot, branch string) error {
+	if strings.TrimSpace(branch) == "" {
+		return fmt.Errorf("push: branch name is required")
+	}
+	_, err := runGit(repoRoot, "push", "-u", "origin", branch)
+	return err
+}
